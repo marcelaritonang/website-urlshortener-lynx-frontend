@@ -7,10 +7,19 @@ import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import AppLayout from './components/AppLayout';
 import Footer from './components/Footer';
+import TypeWriter from './components/TypeWriter';
+import { urlService, ShortenURLResponse } from './services/api';
 
 export default function Home() {
-    const [activeTab, setActiveTab] = useState("shortener");
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [longUrl, setLongUrl] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+    const [result, setResult] = useState<ShortenURLResponse['data'] | null>(null);
+    const [copied, setCopied] = useState(false);
+    const [qrCode, setQrCode] = useState<string | null>(null);
+    const [loadingQR, setLoadingQR] = useState(false);
+    const [showQRModal, setShowQRModal] = useState(false);
     const shortenerRef = useRef<HTMLDivElement>(null);
 
     const toggleSidebar = () => {
@@ -24,9 +33,84 @@ export default function Home() {
         });
     };
 
+    const handleShorten = async () => {
+        if (!longUrl.trim()) {
+            setError("Please enter a URL");
+            return;
+        }
+
+        // Basic URL validation
+        try {
+            new URL(longUrl);
+        } catch {
+            setError("Please enter a valid URL");
+            return;
+        }
+
+        setLoading(true);
+        setError("");
+        setResult(null);
+        setQrCode(null);
+
+        try {
+            const response = await urlService.shortenURL(longUrl);
+            setResult(response.data);
+            setLongUrl("");
+            
+            // Fetch QR Code
+            const shortCode = response.data.short_code;
+            if (shortCode) {
+                setLoadingQR(true);
+                try {
+                    const qrResponse = await urlService.getQRCodeBase64(shortCode);
+                    if (qrResponse.success && qrResponse.data) {
+                        setQrCode(qrResponse.data.qr_code);
+                    }
+                } catch (qrError) {
+                    console.error('Failed to load QR code:', qrError);
+                } finally {
+                    setLoadingQR(false);
+                }
+            }
+        } catch (err: any) {
+            setError(err.message || "Failed to shorten URL. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCopy = async () => {
+        if (result) {
+            await navigator.clipboard.writeText(result.short_url);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
+    const handleShowQR = () => {
+        setShowQRModal(true);
+    };
+
+    const handleDownloadQR = () => {
+        if (!qrCode) return;
+        
+        const link = document.createElement('a');
+        link.href = qrCode;
+        link.download = `qr-code-${result?.short_code || Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            handleShorten();
+        }
+    };
+
     return (
         <AppLayout>
-            <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-white min-h-screen">
+            <div className="bg-white min-h-screen relative overflow-hidden">
                 <Navbar 
                     showSidebarToggle={true}
                     onToggleSidebar={toggleSidebar}
@@ -39,171 +123,294 @@ export default function Home() {
                     )}
                 </AnimatePresence>
 
+                {/* Floating Isometric Elements */}
+                <motion.div 
+                    className="absolute right-32 top-32 w-20 h-20 bg-gradient-to-br from-indigo-400 to-purple-500 opacity-20"
+                    style={{
+                        transform: 'rotateX(45deg) rotateZ(45deg)',
+                        transformStyle: 'preserve-3d',
+                    }}
+                    initial={{ opacity: 0, y: -50 }}
+                    animate={{ opacity: 0.2, y: 0 }}
+                    transition={{ duration: 1, delay: 0.3 }}
+                />
+
+                <motion.div 
+                    className="absolute right-64 top-64 w-16 h-16 bg-gradient-to-br from-pink-400 to-purple-500 opacity-15"
+                    style={{
+                        transform: 'rotateX(45deg) rotateZ(45deg)',
+                        transformStyle: 'preserve-3d',
+                    }}
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: 0.15, scale: 1 }}
+                    transition={{ duration: 0.8, delay: 0.6 }}
+                />
+
+                <motion.div 
+                    className="absolute right-20 bottom-40 w-24 h-24 bg-gradient-to-br from-purple-400 to-indigo-500 opacity-10"
+                    style={{
+                        transform: 'rotateX(45deg) rotateZ(45deg)',
+                        transformStyle: 'preserve-3d',
+                    }}
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 0.1, x: 0 }}
+                    transition={{ duration: 1.2, delay: 0.9 }}
+                />
+
+                <motion.div 
+                    className="absolute left-32 top-48 w-14 h-14 bg-gradient-to-br from-blue-400 to-indigo-500 opacity-15"
+                    style={{
+                        transform: 'rotateX(45deg) rotateZ(45deg)',
+                        transformStyle: 'preserve-3d',
+                    }}
+                    initial={{ opacity: 0, rotate: -45 }}
+                    animate={{ opacity: 0.15, rotate: 0 }}
+                    transition={{ duration: 1, delay: 0.4 }}
+                />
+
+                <motion.div 
+                    className="absolute left-64 bottom-32 w-18 h-18 bg-gradient-to-br from-indigo-400 to-blue-500 opacity-12"
+                    style={{
+                        transform: 'rotateX(45deg) rotateZ(45deg)',
+                        transformStyle: 'preserve-3d',
+                    }}
+                    initial={{ opacity: 0, y: 50 }}
+                    animate={{ opacity: 0.12, y: 0 }}
+                    transition={{ duration: 0.9, delay: 1.1 }}
+                />
+
                 <div className={`transition-all duration-300 ${sidebarOpen ? 'ml-[280px]' : ''}`}>
-                    <motion.main 
-                        className="flex flex-col md:flex-row items-center justify-between w-full max-w-6xl p-8 mx-auto min-h-screen"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                    >
-                        {/* Text Section */}
-                        <div className="text-center md:text-left max-w-md">
-                            <h2 className="text-5xl font-extrabold mb-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                                LYNXS SHORT URL AND QR CODE GENERATOR
-                            </h2>
-                            <p className="text-gray-600 mb-8 leading-relaxed text-lg">
-                                Transform your links into powerful insights. Track, analyze, and optimize your customer engagement with our advanced URL shortening solution.
-                            </p>
-                            <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-                                <button
-                                    onClick={scrollToShortener}
-                                    className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-                                >
-                                    Get Started Free
-                                </button>
-                                <button
-                                    className="border-2 border-purple-500 text-purple-600 px-8 py-4 rounded-xl font-semibold hover:bg-purple-50 transition-all duration-300"
-                                >
-                                    View Pricing
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Image Section */}
-                        <div className="relative">
-                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl blur-3xl opacity-20 transform -rotate-6"></div>
-                            <Image
-                                src="/static/qr3.jpg"
-                                alt="QR Code Illustration"
-                                width={400}
-                                height={400}
-                                className="rounded-2xl shadow-2xl relative z-10"
-                            />
-                        </div>
-                    </motion.main>
-
-                    {/* Secondary Section - Updated background */}
-                    <motion.section 
-                        ref={shortenerRef} 
-                        className="w-full backdrop-blur-sm py-16 px-8 min-h-screen flex items-center"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.5 }}
-                    >
-                        <div className="max-w-3xl w-full mx-auto text-center">
-                            <div className="inline-flex p-1 bg-gray-100 rounded-xl mb-8">
-                                {/* Tab Buttons */}
-                                <button
-                                    className={`px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
-                                        activeTab === "shortener"
-                                            ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg"
-                                            : "text-gray-700 hover:bg-gray-200"
-                                    }`}
-                                    onClick={() => setActiveTab("shortener")}
-                                >
-                                    🔗 Link Shortener
-                                </button>
-                                <button
-                                    className={`px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
-                                        activeTab === "qr"
-                                            ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg"
-                                            : "text-gray-700 hover:bg-gray-200"
-                                    }`}
-                                    onClick={() => setActiveTab("qr")}
-                                >
-                                    📷 QR Code
-                                </button>
-                            </div>
-
-                            {activeTab === "shortener" ? (
-                                <div className="flex items-center gap-4 bg-white rounded-xl p-6 shadow-xl border border-gray-100 w-full max-w-full">
-                                    <input
-                                        type="text"
-                                        placeholder="Paste your long URL here..."
-                                        className="w-full px-6 py-4 border border-gray-200 rounded-lg text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg"
-                                    />
-                                    <button
-                                        className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 whitespace-nowrap"
-                                    >
-                                        Shorten URL
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="flex items-center gap-10 bg-white rounded-xl p-6 shadow-xl border border-gray-100 w-full max-w-full">
-                                    <input
-                                        type="text"
-                                        placeholder="Enter text or URL for QR code..."
-                                        className="w-full px-6 py-4 border border-gray-200 rounded-lg text-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg"
-                                    />
-                                    <button
-                                        className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 whitespace-nowrap"
-                                    >
-                                        Generate QR
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </motion.section>
-
-                    {/* Why Choose Lynxs Section - Updated background */}
-                    <motion.section 
-                        className="w-full py-24 px-8 backdrop-blur-sm"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.5 }}
-                    >
-                        <div className="max-w-6xl mx-auto text-center space-y-16">
-                            <h3 className="text-4xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                                Why Choose Lynxs?
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                {/* Feature Cards */}
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.1 }}
-                                    className="group flex flex-col items-center p-8 rounded-2xl bg-white shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
-                                >
-                                    <div className="p-4 bg-indigo-50 rounded-2xl mb-6 group-hover:scale-110 transition-transform duration-300">
-                                        <Image src="/static/integration.svg" alt="Easy Integration" width={50} height={50} />
-                                    </div>
-                                    <h4 className="text-2xl font-semibold text-gray-800 mb-4">Easy Integration</h4>
-                                    <p className="text-gray-600">Connect and deploy within minutes with our powerful API and comprehensive documentation.</p>
-                                </motion.div>
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.2 }}
-                                    className="group flex flex-col items-center p-8 rounded-2xl bg-white shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
-                                >
-                                    <div className="p-4 bg-purple-50 rounded-2xl mb-6 group-hover:scale-110 transition-transform duration-300">
-                                        <Image src="/static/global.svg" alt="Global Access" width={50} height={50} />
-                                    </div>
-                                    <h4 className="text-2xl font-semibold text-gray-800 mb-4">Global Access</h4>
-                                    <p className="text-gray-600">Reliable and fast access to your shortened links from anywhere in the world.</p>
-                                </motion.div>
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.3 }}
-                                    className="group flex flex-col items-center p-8 rounded-2xl bg-white shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
-                                >
-                                    <div className="p-4 bg-pink-50 rounded-2xl mb-6 group-hover:scale-110 transition-transform duration-300">
-                                        <Image src="/static/analytic.svg" alt="Advanced Analytics" width={50} height={50} />
-                                    </div>
-                                    <h4 className="text-2xl font-semibold text-gray-800 mb-4">Advanced Analytics</h4>
-                                    <p className="text-gray-600">Deep insights into user behavior with real-time tracking and detailed reports.</p>
-                                </motion.div>
-                            </div>
-                            <button
-                                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-12 py-5 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
+                    <main className="flex items-center w-full max-w-6xl px-8 mx-auto min-h-screen relative z-10">
+                        <div ref={shortenerRef} className="w-full max-w-3xl mx-auto">
+                            <motion.div 
+                                className="text-center mb-12"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.6 }}
                             >
-                                Explore All Features
-                            </button>
+                                <h1 className="text-7xl font-bold mb-6 text-gray-900 leading-tight min-h-[5rem]">
+                                    <TypeWriter 
+                                        texts={[
+                                            "Shorten your links",
+                                            "Track your clicks",
+                                            "Grow your business",
+                                            "Share with ease"
+                                        ]}
+                                        typingSpeed={100}
+                                        deletingSpeed={50}
+                                        delayBetween={2000}
+                                    />
+                                </h1>
+                                <p className="text-gray-600 text-xl max-w-2xl mx-auto">
+                                    Create short, memorable links in seconds. Track clicks and optimize your campaigns.
+                                </p>
+                            </motion.div>
+
+                            {/* URL Input */}
+                            <motion.div 
+                                className="bg-gray-50 rounded-2xl p-8 mb-8 shadow-sm"
+                                initial={{ opacity: 0, y: 30 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.6, delay: 0.2 }}
+                            >
+                                <div className="flex items-stretch gap-3 mb-4">
+                                    <input
+                                        type="text"
+                                        value={longUrl}
+                                        onChange={(e) => setLongUrl(e.target.value)}
+                                        onKeyPress={handleKeyPress}
+                                        placeholder="Paste your long URL here"
+                                        className="flex-1 px-6 py-5 bg-white border-2 border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-gray-900 text-lg transition-all"
+                                        disabled={loading}
+                                    />
+                                    <button 
+                                        onClick={handleShorten}
+                                        disabled={loading}
+                                        className="bg-gray-900 text-white px-10 py-5 rounded-xl font-semibold hover:bg-gray-800 transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {loading ? "Shortening..." : "Shorten"}
+                                    </button>
+                                </div>
+
+                                {error && (
+                                    <p className="text-sm text-red-600 text-center mb-2">
+                                        {error}
+                                    </p>
+                                )}
+
+                                <p className="text-sm text-gray-500 text-center">
+                                    Free forever • No registration required
+                                </p>
+                            </motion.div>
+
+                            {/* Result Display */}
+                            <AnimatePresence>
+                                {result && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -20 }}
+                                        className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200"
+                                    >
+                                        {/* Short URL Display with Logo */}
+                                        <div className="flex items-center gap-3 mb-6">
+                                            {/* Logo */}
+                                            <div className="w-12 h-12 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
+                                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                                </svg>
+                                            </div>
+                                            {/* URL with Copy Box */}
+                                            <div className="flex-1 flex items-center gap-2 bg-gray-50 rounded-xl p-4 border border-gray-200">
+                                                <a 
+                                                    href={result.short_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex-1 text-lg font-semibold text-gray-900 hover:text-indigo-600 transition-colors truncate"
+                                                >
+                                                    {result.short_url}
+                                                </a>
+                                                <button
+                                                    onClick={handleCopy}
+                                                    className="px-4 py-2 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 rounded-lg font-medium transition-all flex items-center gap-2 flex-shrink-0"
+                                                >
+                                                    {copied ? (
+                                                        <>
+                                                            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                            <span className="text-green-600">Copied</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                            </svg>
+                                                            Copy
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* QR Code Button */}
+                                        <div className="mb-6">
+                                            <button
+                                                onClick={handleShowQR}
+                                                className="w-full px-6 py-3 border-2 border-gray-200 text-gray-700 hover:border-gray-900 hover:text-gray-900 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
+                                            >
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                                                </svg>
+                                                View QR Code
+                                            </button>
+                                        </div>
+
+                                        {/* Stats */}
+                                        <div className="pt-6 border-t border-gray-200">
+                                            <div className="grid grid-cols-2 gap-6">
+                                                <div>
+                                                    <p className="text-xs text-gray-500 mb-1.5 uppercase tracking-wide">Original URL</p>
+                                                    <p className="text-gray-900 text-sm truncate font-medium">
+                                                        {result.long_url}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-gray-500 mb-1.5 uppercase tracking-wide">Total Clicks</p>
+                                                    <p className="text-gray-900 text-2xl font-bold">
+                                                        {result.clicks}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
-                    </motion.section>
+                    </main>
                 </div>
             </div>
+
+            {/* QR Code Modal */}
+            <AnimatePresence>
+                {showQRModal && result && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setShowQRModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl"
+                        >
+                            {/* Header */}
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-2xl font-bold text-gray-900">Share via QR code</h3>
+                                <button
+                                    onClick={() => setShowQRModal(false)}
+                                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                                >
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            {/* QR Code */}
+                            <div className="bg-white border-2 border-gray-200 rounded-2xl p-8 mb-6 flex items-center justify-center">
+                                {loadingQR ? (
+                                    <div className="w-64 h-64 flex items-center justify-center">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <div className="w-12 h-12 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
+                                            <p className="text-sm text-gray-600 font-medium">Generating...</p>
+                                        </div>
+                                    </div>
+                                ) : qrCode ? (
+                                    <img
+                                        src={qrCode}
+                                        alt="QR Code"
+                                        className="w-64 h-64 object-contain"
+                                    />
+                                ) : (
+                                    <div className="w-64 h-64 flex flex-col items-center justify-center text-gray-400">
+                                        <svg className="w-16 h-16 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                                        </svg>
+                                        <p className="text-sm">QR Code unavailable</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* URL Display */}
+                            <div className="text-center mb-6">
+                                <p className="text-sm text-gray-500 mb-2">Here is your unique QR code that will direct</p>
+                                <p className="text-gray-900 font-semibold break-all">
+                                    {result.short_url}
+                                </p>
+                            </div>
+
+                            {/* Download Button */}
+                            {qrCode && (
+                                <button
+                                    onClick={handleDownloadQR}
+                                    className="w-full px-6 py-3.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                    Download QR Code
+                                </button>
+                            )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <Footer />
         </AppLayout>
     );

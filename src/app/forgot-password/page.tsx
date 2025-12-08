@@ -2,121 +2,158 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import Image from 'next/image';
 import Link from 'next/link';
 import AppLayout from '../components/AppLayout';
+import { authApi } from '../services/api';
 
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState('');
-    const [isSubmitted, setIsSubmitted] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Handle password reset logic here
-        setIsSubmitted(true);
+        setError('');
+        setLoading(true);
+
+        try {
+            const response = await authApi.forgotPassword(email);
+            
+            if (response.success) {
+                setSuccess(true);
+            } else {
+                setError(response.message || 'Failed to send reset email');
+            }
+        } catch (err: any) {
+            console.error('Forgot password error:', err);
+            setError(err.message || 'Failed to send reset email. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
         <AppLayout>
-            <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-white">
-                <main className="container mx-auto pt-20 px-4">
-                    <div className="max-w-6xl mx-auto">
-                        <div className="flex flex-col md:flex-row items-center justify-between gap-12 bg-white rounded-2xl p-8 shadow-xl">
-                            {/* Form Section */}
-                            <motion.div
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                className="w-full md:w-1/2 max-w-md"
-                            >
-                                {!isSubmitted ? (
-                                    <>
-                                        <h1 className="text-3xl font-bold text-purple-600 mb-2">
-                                            Forgot Password?
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
+                <div className="w-full max-w-md">
+                    {/* Logo */}
+                    <div className="text-center mb-8">
+                        <Link href="/" className="inline-flex items-center justify-center mb-6">
+                            <div className="w-16 h-16 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 rounded-2xl flex items-center justify-center shadow-xl">
+                                <svg
+                                    className="w-9 h-9 text-white"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2.5}
+                                        d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                                    />
+                                </svg>
+                            </div>
+                        </Link>
+                        <h2 className="text-3xl font-bold text-gray-900">Shorteny</h2>
+                    </div>
+
+                    {/* Forgot Password Card */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+                        <motion.div
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.5 }}
+                            className="space-y-6"
+                        >
+                            {!success ? (
+                                <>
+                                    <div className="text-center md:text-left">
+                                        <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                                            Forgot password?
                                         </h1>
-                                        <p className="text-gray-600 mb-8">
-                                            Don't worry! Enter your email and we'll send you a reset link.
+                                        <p className="text-gray-600">
+                                            Enter your email and we'll send you instructions to reset your password.
                                         </p>
+                                    </div>
 
-                                        <form onSubmit={handleSubmit} className="space-y-6">
-                                            <div>
-                                                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Email
-                                                </label>
-                                                <input
-                                                    id="email"
-                                                    type="email"
-                                                    value={email}
-                                                    onChange={(e) => setEmail(e.target.value)}
-                                                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                                                    placeholder="Enter your email"
-                                                    required
-                                                />
+                                    <form onSubmit={handleSubmit} className="space-y-5">
+                                        {error && (
+                                            <div className="p-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg">
+                                                {error}
                                             </div>
+                                        )}
 
-                                            <button
-                                                type="submit"
-                                                className="w-full bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700 transition-colors"
-                                            >
-                                                Send Reset Link
-                                            </button>
-                                        </form>
-                                    </>
-                                ) : (
-                                    <motion.div
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        className="text-center"
-                                    >
-                                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                            <span className="text-2xl">✓</span>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-900 mb-2">
+                                                Email address
+                                            </label>
+                                            <input
+                                                type="email"
+                                                value={email}
+                                                onChange={(e) => setEmail(e.target.value)}
+                                                className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:border-gray-900 transition-all"
+                                                placeholder="Enter your email"
+                                                required
+                                                disabled={loading}
+                                            />
                                         </div>
-                                        <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                                            Check your email
-                                        </h2>
-                                        <p className="text-gray-600 mb-6">
-                                            We've sent a password reset link to<br />
-                                            <span className="font-medium text-purple-600">{email}</span>
-                                        </p>
-                                        <p className="text-sm text-gray-500 mb-4">
-                                            "Didn't receive the email? Check your spam folder" 
-                                        </p>
-                                        <button 
-                                            onClick={() => setIsSubmitted(false)}
-                                            className="text-purple-600 font-medium hover:text-purple-700"
-                                        >
-                                            Try another email
-                                        </button>
-                                    </motion.div>
-                                )}
 
-                                <div className="mt-6 text-center">
-                                    <Link 
-                                        href="/login" 
-                                        className="text-purple-600 hover:text-purple-700 font-medium inline-flex items-center"
+                                        <button
+                                            type="submit"
+                                            className={`w-full bg-gray-900 text-white py-3 rounded-lg font-semibold transition-all ${
+                                                loading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-800'
+                                            }`}
+                                            disabled={loading}
+                                        >
+                                            {loading ? 'Sending...' : 'Send reset link'}
+                                        </button>
+                                    </form>
+                                </>
+                            ) : (
+                                <div className="text-center py-8">
+                                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                        </svg>
+                                    </div>
+                                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                                        Check your email
+                                    </h2>
+                                    <p className="text-gray-600 mb-6">
+                                        We've sent a password reset link to<br />
+                                        <span className="font-medium text-gray-900">{email}</span>
+                                    </p>
+                                    <p className="text-sm text-gray-500 mb-6">
+                                        Didn't receive the email? Check your spam folder or{' '}
+                                        <button
+                                            onClick={() => setSuccess(false)}
+                                            className="text-gray-900 hover:underline font-semibold"
+                                        >
+                                            try again
+                                        </button>
+                                    </p>
+                                    <Link
+                                        href="/login"
+                                        className="inline-block px-6 py-3 bg-gray-900 text-white rounded-lg font-semibold hover:bg-gray-800 transition-all"
                                     >
-                                        <span className="mr-2">←</span>
                                         Back to Login
                                     </Link>
                                 </div>
-                            </motion.div>
+                            )}
 
-                            {/* Illustration Section */}
-                            <motion.div
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                className="w-full md:w-1/2 flex justify-center"
-                            >
-                                <Image
-                                    src="/static/qr3.jpg"
-                                    alt="Reset Password Illustration"
-                                    width={400}
-                                    height={400}
-                                    className="object-contain"
-                                />
-                            </motion.div>
-                        </div>
+                            {!success && (
+                                <p className="text-center text-sm text-gray-600">
+                                    Remember your password?{' '}
+                                    <Link href="/login" className="text-gray-900 hover:underline font-semibold">
+                                        Sign in
+                                    </Link>
+                                </p>
+                            )}
+                        </motion.div>
                     </div>
-                </main>
+                </div>
             </div>
         </AppLayout>
     );

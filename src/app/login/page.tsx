@@ -1,24 +1,41 @@
 "use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import AppLayout from '../components/AppLayout';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { LoginForm } from '../components/login/LoginForm';
-import { LoginIllustration } from '../components/login/LoginIllustration';
+import AppLayout from '../components/AppLayout';
+import Link from 'next/link';
 
 export default function LoginPage() {
-    const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
+    const router = useRouter();
+    const searchParams = useSearchParams();
+
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            router.push('/dashboard');
+            return;
+        }
+
+        if (searchParams.get('registered') === 'true') {
+            setSuccess('Account created successfully! Please sign in.');
+        }
+    }, [searchParams, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
         setError('');
-    
+        setSuccess('');
+        setLoading(true);
+
         try {
+            console.log('Attempting login with:', { email }); // Debug
+
             const response = await fetch('http://localhost:8080/v1/auth/login', {
                 method: 'POST',
                 headers: {
@@ -29,20 +46,32 @@ export default function LoginPage() {
                     password
                 })
             });
-    
-            const data = await response.json();
-            console.log('Login response:', data); // Debug respons
 
-            // Pastikan token ada dalam respons
+            const data = await response.json();
+            console.log('Login response:', response.status, data); // Debug
+
             if (response.ok && data?.data?.token) {
                 localStorage.setItem('token', data.data.token);
+                
+                window.dispatchEvent(new Event('storage'));
+                window.dispatchEvent(new Event('auth-change'));
+                
                 router.push('/dashboard');
             } else {
-                setError(data.message || 'Login failed');
+                // Handle specific error messages
+                if (response.status === 401) {
+                    setError('Invalid email or password. Please try again.');
+                } else if (data.error) {
+                    setError(data.error);
+                } else if (data.message) {
+                    setError(data.message);
+                } else {
+                    setError('Login failed. Please check your credentials.');
+                }
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Login error:', error);
-            setError('Failed to login. Please try again.');
+            setError('Network error. Please check your connection and try again.');
         } finally {
             setLoading(false);
         }
@@ -50,10 +79,40 @@ export default function LoginPage() {
 
     return (
         <AppLayout>
-            <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-white">
-                <main className="flex-1 flex items-center justify-center p-4 pt-20">
-                    <div className="w-full max-w-4xl grid md:grid-cols-2 gap-8 items-center bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl">
-                        <LoginForm 
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
+                <div className="w-full max-w-md">
+                    {/* Logo */}
+                    <div className="text-center mb-8">
+                        <Link href="/" className="inline-flex items-center justify-center mb-6">
+                            <div className="w-16 h-16 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 rounded-2xl flex items-center justify-center shadow-xl">
+                                <svg
+                                    className="w-9 h-9 text-white"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2.5}
+                                        d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                                    />
+                                </svg>
+                            </div>
+                        </Link>
+                        <h2 className="text-3xl font-bold text-gray-900">Shorteny</h2>
+                    </div>
+
+                    {/* Success Message */}
+                    {success && (
+                        <div className="mb-6 p-4 text-sm text-green-600 bg-green-50 border border-green-100 rounded-lg">
+                            {success}
+                        </div>
+                    )}
+
+                    {/* Login Form Card */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+                        <LoginForm
                             email={email}
                             password={password}
                             setEmail={setEmail}
@@ -62,9 +121,8 @@ export default function LoginPage() {
                             error={error}
                             loading={loading}
                         />
-                        <LoginIllustration />
                     </div>
-                </main>
+                </div>
             </div>
         </AppLayout>
     );
