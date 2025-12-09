@@ -211,7 +211,7 @@ export default function DashboardPage() {
     link.href = selectedQR.qrCode;
     link.download = `qr-code-${Date.now()}.png`;
     document.body.appendChild(link);
-    link.click();
+    link.click();                                                                                   
     document.body.removeChild(link);
   };
 
