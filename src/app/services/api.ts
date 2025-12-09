@@ -1,5 +1,11 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
+// Helper untuk ngrok requests
+const ngrokHeaders = {
+    'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': '69420', // Skip ngrok browser warning
+};
+
 export interface ShortenURLRequest {
     long_url: string;
     short_code?: string;
@@ -24,12 +30,11 @@ export const urlService = {
     async shortenURL(longUrl: string, customAlias?: string): Promise<ShortenURLResponse> {
         const response = await fetch(`${API_BASE_URL}/api/urls`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: ngrokHeaders,
             body: JSON.stringify({
                 long_url: longUrl,
-                short_code: customAlias || undefined,
+                custom_short_code: customAlias,
+                expiry_hours: 168
             }),
         });
 
@@ -38,7 +43,17 @@ export const urlService = {
             throw new Error(error.message || 'Failed to shorten URL');
         }
 
-        return response.json();
+        const result = await response.json();
+        
+        // Fix short_url to use ngrok domain instead of localhost
+        if (result.data && result.data.short_url) {
+            result.data.short_url = result.data.short_url.replace(
+                'http://localhost:8080',
+                API_BASE_URL
+            );
+        }
+
+        return result;
     },
 
     getShortURL(shortCode: string): string {
@@ -52,9 +67,7 @@ export const urlService = {
     async getQRCodeBase64(shortCode: string) {
         const response = await fetch(`${API_BASE_URL}/qr/${shortCode}/base64`, {
             method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: ngrokHeaders,
         });
 
         if (!response.ok) {
@@ -68,6 +81,41 @@ export const urlService = {
 
 // Add authenticated API functions
 export const authApi = {
+    async register(email: string, password: string, firstName: string, lastName: string) {
+        const response = await fetch(`${API_BASE_URL}/v1/auth/register`, {
+            method: 'POST',
+            headers: ngrokHeaders,
+            body: JSON.stringify({
+                email,
+                password,
+                first_name: firstName,
+                last_name: lastName
+            }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to register');
+        }
+
+        return response.json();
+    },
+
+    async login(email: string, password: string) {
+        const response = await fetch(`${API_BASE_URL}/v1/auth/login`, {
+            method: 'POST',
+            headers: ngrokHeaders,
+            body: JSON.stringify({ email, password }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to login');
+        }
+
+        return response.json();
+    },
+
     // Get user's URLs (authenticated)
     async getUserUrls(token: string, page: number = 1, perPage: number = 10) {
         const response = await fetch(
