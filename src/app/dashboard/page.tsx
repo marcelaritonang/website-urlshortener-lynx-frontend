@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import AppLayout from "../components/AppLayout";
 import { motion, AnimatePresence } from "framer-motion";
 import { authApi, urlService } from "../services/api";
-import Image from "next/image";
 
 interface Url {
   id: string;
@@ -33,6 +32,51 @@ export default function DashboardPage() {
   const [loadingQR, setLoadingQR] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
+  const fetchUrls = useCallback(
+    async (token: string, showLoading = true) => {
+      if (showLoading) setLoading(true);
+      setError("");
+      try {
+        const data = await authApi.getUserUrls(token, 1, 10);
+
+        if (data.data && Array.isArray(data.data)) {
+          const urls = data.data.map((item: any) => item.url);
+          setUrls(urls);
+          setTotalLinks(data.meta?.total || 0);
+          const clicks = urls.reduce(
+            (sum: number, url: Url) => sum + url.clicks,
+            0
+          );
+          setTotalClicks(clicks);
+        } else {
+          setUrls([]);
+        }
+      } catch (err: any) {
+        if (showLoading) {
+          setError(err.message || "Failed to fetch URLs");
+        }
+        if (err.message.includes("unauthorized") || err.message.includes("token")) {
+          localStorage.removeItem("token");
+          router.push("/login");
+        }
+      } finally {
+        if (showLoading) setLoading(false);
+      }
+    },
+    [router]
+  );
+
+  const fetchUserData = async (token: string) => {
+    try {
+      const data = await authApi.getUserDetails(token);
+      if (data.data) {
+        setUserName(data.data.first_name || "User");
+      }
+    } catch (error) {
+      console.error("Failed to fetch user data:", error);
+    }
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -41,7 +85,7 @@ export default function DashboardPage() {
       fetchUserData(token);
       fetchUrls(token);
     }
-  }, [router, fetchUrls]); // Add fetchUrls to dependency array
+  }, [router, fetchUrls]);
 
   // Auto-refresh URLs every 5 seconds to update clicks
   useEffect(() => {
@@ -55,49 +99,7 @@ export default function DashboardPage() {
     }, 5000); // Refresh every 5 seconds
 
     return () => clearInterval(intervalId);
-  }, [autoRefresh, fetchUrls]); // Add fetchUrls to dependency array
-
-  const fetchUserData = async (token: string) => {
-    try {
-      const data = await authApi.getUserDetails(token);
-      if (data.data) {
-        setUserName(data.data.first_name || "User");
-      }
-    } catch (error) {
-      console.error("Failed to fetch user data:", error);
-    }
-  };
-
-  const fetchUrls = async (token: string, showLoading = true) => {
-    if (showLoading) setLoading(true);
-    setError("");
-    try {
-      const data = await authApi.getUserUrls(token, 1, 10);
-
-      if (data.data && Array.isArray(data.data)) {
-        const urls = data.data.map((item: any) => item.url);
-        setUrls(urls);
-        setTotalLinks(data.meta?.total || 0);
-        const clicks = urls.reduce(
-          (sum: number, url: Url) => sum + url.clicks,
-          0
-        );
-        setTotalClicks(clicks);
-      } else {
-        setUrls([]);
-      }
-    } catch (err: any) {
-      if (showLoading) {
-        setError(err.message || "Failed to fetch URLs");
-      }
-      if (err.message.includes("unauthorized") || err.message.includes("token")) {
-        localStorage.removeItem("token");
-        router.push("/login");
-      }
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  };
+  }, [autoRefresh, fetchUrls]);
 
   const handleShorten = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -212,7 +214,7 @@ export default function DashboardPage() {
     link.href = selectedQR.qrCode;
     link.download = `qr-code-${Date.now()}.png`;
     document.body.appendChild(link);
-    link.click();                                                                                   
+    link.click();                                                                                  
     document.body.removeChild(link);
   };
 
@@ -462,11 +464,9 @@ export default function DashboardPage() {
                 ) : selectedQR ? (
                   <div className="space-y-6">
                     <div className="bg-white border-2 border-gray-200 rounded-xl p-6 flex items-center justify-center">
-                      <Image
+                      <img
                         src={selectedQR.qrCode}
                         alt="QR Code"
-                        width={256}
-                        height={256}
                         className="w-64 h-64"
                       />
                     </div>
