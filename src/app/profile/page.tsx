@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Navbar from "../components/Navbar";
@@ -33,16 +33,7 @@ export default function ProfilePage() {
         email: "",
     });
 
-    useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (!token) {
-            router.push("/login");
-        } else {
-            fetchUserData(token);
-        }
-    }, [router]);
-
-    const fetchUserData = async (token: string) => {
+    const fetchUserData = useCallback(async (token: string) => {
         setLoading(true);
         try {
             const data = await authApi.getUserDetails(token);
@@ -63,7 +54,16 @@ export default function ProfilePage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [router]);
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            router.push("/login");
+        } else {
+            fetchUserData(token);
+        }
+    }, [router, fetchUserData]);
 
     const handleSave = async () => {
         setSaving(true);
