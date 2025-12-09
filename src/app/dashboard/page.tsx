@@ -7,6 +7,7 @@ import Footer from "../components/Footer";
 import AppLayout from "../components/AppLayout";
 import { motion, AnimatePresence } from "framer-motion";
 import { authApi, urlService } from "../services/api";
+import Image from "next/image";
 
 interface Url {
   id: string;
@@ -40,7 +41,7 @@ export default function DashboardPage() {
       fetchUserData(token);
       fetchUrls(token);
     }
-  }, [router]);
+  }, [router, fetchUrls]); // Add fetchUrls to dependency array
 
   // Auto-refresh URLs every 5 seconds to update clicks
   useEffect(() => {
@@ -54,7 +55,7 @@ export default function DashboardPage() {
     }, 5000); // Refresh every 5 seconds
 
     return () => clearInterval(intervalId);
-  }, [autoRefresh]);
+  }, [autoRefresh, fetchUrls]); // Add fetchUrls to dependency array
 
   const fetchUserData = async (token: string) => {
     try {
@@ -461,9 +462,11 @@ export default function DashboardPage() {
                 ) : selectedQR ? (
                   <div className="space-y-6">
                     <div className="bg-white border-2 border-gray-200 rounded-xl p-6 flex items-center justify-center">
-                      <img
+                      <Image
                         src={selectedQR.qrCode}
                         alt="QR Code"
+                        width={256}
+                        height={256}
                         className="w-64 h-64"
                       />
                     </div>

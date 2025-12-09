@@ -74,7 +74,7 @@ export default function ForgotPasswordPage() {
                                             Forgot password?
                                         </h1>
                                         <p className="text-gray-600">
-                                            Enter your email and we'll send you instructions to reset your password.
+                                            Enter your email and we&apos;ll send you instructions to reset your password.
                                         </p>
                                     </div>
 
@@ -126,7 +126,7 @@ export default function ForgotPasswordPage() {
                                         <span className="font-medium text-gray-900">{email}</span>
                                     </p>
                                     <p className="text-sm text-gray-500 mb-6">
-                                        Didn't receive the email? Check your spam folder or{' '}
+                                        Didn&apos;t receive the email? Check your spam folder or{' '}
                                         <button
                                             onClick={() => setSuccess(false)}
                                             className="text-gray-900 hover:underline font-semibold"

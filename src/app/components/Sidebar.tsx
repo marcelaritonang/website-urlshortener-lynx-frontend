@@ -56,7 +56,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
                                 L
                             </div>
                             <div className="ml-3">
-                                <h2 className="text-gray-800 font-semibold tracking-wide text-sm">RIANCO'S</h2>
+                                <h2 className="text-gray-800 font-semibold tracking-wide text-sm">RIANCO&apos;S</h2>
                                 <p className="text-gray-500 text-xs">WORKSPACE</p>
                             </div>
                         </div>
