@@ -1,36 +1,155 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Shorteny - URL Shortener
 
-## Getting Started
+Modern and minimalist URL shortener built with Next.js 14, TypeScript, and Tailwind CSS.
 
-First, run the development server:
+## ✨ Features
+
+- 🔗 Shorten long URLs instantly
+- 📱 QR Code generation for each link
+- 📊 Click tracking and analytics
+- 👤 User authentication & dashboard
+- 🎨 Beautiful, minimalist UI design
+- ⚡ Real-time updates
+- 🔐 Secure password reset via email
+
+## 🛠️ Tech Stack
+
+- **Framework:** Next.js 14 (App Router)
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS
+- **Animation:** Framer Motion
+- **Backend:** Go (Gin Framework)
+- **Database:** PostgreSQL
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+ installed
+- Backend API running on `http://localhost:8080`
+
+### Installation
+
+1. Clone the repository:
+
+   ```bash
+   git clone <repository-url>
+   cd website-urlshortener-lynx-frontend
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+3. Create `.env.local` file:
+
+   ```env
+   NEXT_PUBLIC_API_URL=http://localhost:8080
+   ```
+
+4. Run development server:
+
+   ```bash
+   npm run dev
+   ```
+
+5. Open [http://localhost:3000](http://localhost:3000)
+
+## 📦 Build for Production
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run build
+npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 📁 Project Structure
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```markdown
+app
+├── api
+│ ├── auth
+│ │ ├── [...nextauth]
+│ │ └── route.ts
+│ ├── links
+│ │ └── route.ts
+│ └── users
+│ └── route.ts
+├── components
+│ ├── Auth
+│ │ ├── LoginForm.tsx
+│ │ └── RegisterForm.tsx
+│ ├── Dashboard
+│ │ ├── Dashboard.tsx
+│ │ └── LinkTable.tsx
+│ ├── Layout
+│ │ └── Navbar.tsx
+│ ├── Link
+│ │ ├── LinkCard.tsx
+│ │ └── QRCode.tsx
+│ └── ui
+│ ├── Button.tsx
+│ ├── Input.tsx
+│ └── Modal.tsx
+├── hooks
+│ ├── useAuth.ts
+│ ├── useLinks.ts
+│ └── useUser.ts
+├── lib
+│ ├── db.ts
+│ └── prisma.ts
+├── middleware
+│ └── auth.ts
+├── pages
+│ ├── api
+│ │ ├── auth
+│ │ │ ├── [...nextauth].ts
+│ │ │ └── route.ts
+│ │ ├── links
+│ │ │ └── route.ts
+│ │ └── users
+│ │ └── route.ts
+│ ├── \_app.tsx
+│ ├── \_document.tsx
+│ ├── index.tsx
+│ ├── login.tsx
+│ ├── register.tsx
+│ └── dashboard.tsx
+├── public
+│ ├── favicon.ico
+│ ├── logo.png
+│ └── qr-placeholder.png
+├── styles
+│ ├── globals.css
+│ └── tailwind.css
+├── tailwind.config.js
+├── tsconfig.json
+└── vercel.json
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📚 API Reference
 
-## Learn More
+- **Authentication:**
 
-To learn more about Next.js, take a look at the following resources:
+  - `POST /api/auth/register`: Register a new user
+  - `POST /api/auth/login`: Log in an existing user
+  - `GET /api/auth/me`: Get current user session
+  - `POST /api/auth/logout`: Log out the current user
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Links:**
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+  - `POST /api/links`: Create a new shortened link
+  - `GET /api/links`: Get all links for the authenticated user
+  - `GET /api/links/:id`: Get a specific link by ID
+  - `DELETE /api/links/:id`: Delete a link by ID
 
-## Deploy on Vercel
+- **Users:**
+  - `GET /api/users`: Get all users (admin only)
+  - `GET /api/users/:id`: Get a specific user by ID (admin only)
+  - `PUT /api/users/:id`: Update a user's information (admin only)
+  - `DELETE /api/users/:id`: Delete a user by ID (admin only)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📧 Contact
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+For feedback or issues, please contact [support@shorteny.com](mailto:support@shorteny.com).
