@@ -37,7 +37,7 @@ export default function SignupPage() {
         setLoading(true);
 
         try {
-            const response = await fetch('http://localhost:8080/v1/auth/register', {
+            const response = await fetch('http://103.197.191.79:8080/v1/auth/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
