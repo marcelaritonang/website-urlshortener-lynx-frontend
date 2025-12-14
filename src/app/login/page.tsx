@@ -40,7 +40,7 @@ function LoginContent() {
         try {
             console.log('Attempting login with:', { email });
 
-            const response = await fetch('http://103.197.191.79:8080/v1/auth/login', {
+            const response = await fetch('https://shorteny.my.id/v1/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

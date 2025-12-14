@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://103.197.191.79:8080';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://shorteny.my.id';
 
 // Helper untuk ngrok requests
 const ngrokHeaders = {
@@ -48,7 +48,7 @@ export const urlService = {
         // Fix short_url to use ngrok domain instead of localhost
         if (result.data && result.data.short_url) {
             result.data.short_url = result.data.short_url.replace(
-                'http://103.197.191.79:8080',
+                'https://shorteny.my.id',
                 API_BASE_URL
             );
         }
