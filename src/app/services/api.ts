@@ -1,11 +1,5 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://shorteny.my.id';
 
-// Helper untuk ngrok requests
-const ngrokHeaders = {
-    'Content-Type': 'application/json',
-    'ngrok-skip-browser-warning': '69420', // Skip ngrok browser warning
-};
-
 export interface ShortenURLRequest {
     long_url: string;
     short_code?: string;
@@ -27,33 +21,26 @@ export interface ShortenURLResponse {
 }
 
 export const urlService = {
+    // Anonymous URL shortening (no auth required)
     async shortenURL(longUrl: string, customAlias?: string): Promise<ShortenURLResponse> {
         const response = await fetch(`${API_BASE_URL}/api/urls`, {
             method: 'POST',
-            headers: ngrokHeaders,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'omit', // Don't send cookies
             body: JSON.stringify({
                 long_url: longUrl,
                 custom_short_code: customAlias,
-                expiry_hours: 168
             }),
         });
 
         if (!response.ok) {
-            const error = await response.json();
+            const error = await response.json().catch(() => ({ message: 'Failed to shorten URL' }));
             throw new Error(error.message || 'Failed to shorten URL');
         }
 
-        const result = await response.json();
-        
-        // Fix short_url to use ngrok domain instead of localhost
-        if (result.data && result.data.short_url) {
-            result.data.short_url = result.data.short_url.replace(
-                'https://shorteny.my.id',
-                API_BASE_URL
-            );
-        }
-
-        return result;
+        return response.json();
     },
 
     getShortURL(shortCode: string): string {
@@ -67,11 +54,13 @@ export const urlService = {
     async getQRCodeBase64(shortCode: string) {
         const response = await fetch(`${API_BASE_URL}/qr/${shortCode}/base64`, {
             method: 'GET',
-            headers: ngrokHeaders,
+            headers: {
+                'Content-Type': 'application/json',
+            },
         });
 
         if (!response.ok) {
-            const error = await response.json();
+            const error = await response.json().catch(() => ({ message: 'Failed to get QR code' }));
             throw new Error(error.message || 'Failed to get QR code');
         }
 
@@ -79,12 +68,14 @@ export const urlService = {
     },
 };
 
-// Add authenticated API functions
+// Authenticated API functions
 export const authApi = {
     async register(email: string, password: string, firstName: string, lastName: string) {
         const response = await fetch(`${API_BASE_URL}/v1/auth/register`, {
             method: 'POST',
-            headers: ngrokHeaders,
+            headers: {
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify({
                 email,
                 password,
@@ -94,7 +85,7 @@ export const authApi = {
         });
 
         if (!response.ok) {
-            const error = await response.json();
+            const error = await response.json().catch(() => ({ message: 'Failed to register' }));
             throw new Error(error.message || 'Failed to register');
         }
 
@@ -104,12 +95,14 @@ export const authApi = {
     async login(email: string, password: string) {
         const response = await fetch(`${API_BASE_URL}/v1/auth/login`, {
             method: 'POST',
-            headers: ngrokHeaders,
+            headers: {
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify({ email, password }),
         });
 
         if (!response.ok) {
-            const error = await response.json();
+            const error = await response.json().catch(() => ({ message: 'Failed to login' }));
             throw new Error(error.message || 'Failed to login');
         }
 
@@ -129,7 +122,7 @@ export const authApi = {
         );
 
         if (!response.ok) {
-            const error = await response.json();
+            const error = await response.json().catch(() => ({ message: 'Failed to fetch URLs' }));
             throw new Error(error.message || 'Failed to fetch URLs');
         }
 
@@ -151,7 +144,7 @@ export const authApi = {
         });
 
         if (!response.ok) {
-            const error = await response.json();
+            const error = await response.json().catch(() => ({ message: 'Failed to create short URL' }));
             throw new Error(error.message || 'Failed to create short URL');
         }
 
@@ -164,11 +157,12 @@ export const authApi = {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
             },
         });
 
         if (!response.ok) {
-            const error = await response.json();
+            const error = await response.json().catch(() => ({ message: 'Failed to delete URL' }));
             throw new Error(error.message || 'Failed to delete URL');
         }
 
@@ -185,7 +179,7 @@ export const authApi = {
         });
 
         if (!response.ok) {
-            const error = await response.json();
+            const error = await response.json().catch(() => ({ message: 'Failed to fetch user details' }));
             throw new Error(error.message || 'Failed to fetch user details');
         }
 
@@ -198,11 +192,12 @@ export const authApi = {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
             },
         });
 
         if (!response.ok) {
-            const error = await response.json();
+            const error = await response.json().catch(() => ({ message: 'Failed to logout' }));
             throw new Error(error.message || 'Failed to logout');
         }
 
@@ -220,7 +215,7 @@ export const authApi = {
         });
 
         if (!response.ok) {
-            const error = await response.json();
+            const error = await response.json().catch(() => ({ message: 'Failed to send reset email' }));
             throw new Error(error.message || 'Failed to send reset email');
         }
 
@@ -241,7 +236,7 @@ export const authApi = {
         });
 
         if (!response.ok) {
-            const error = await response.json();
+            const error = await response.json().catch(() => ({ message: 'Failed to reset password' }));
             throw new Error(error.message || 'Failed to reset password');
         }
 
